@@ -20,11 +20,23 @@ object DatabaseModule {
             context,
             NexusDatabase::class.java,
             "nexus_db"
-        ).build()
+        )
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides
     fun provideTrackDao(database: NexusDatabase): TrackDao {
         return database.trackDao()
+    }
+
+    @Provides
+    fun providePresetDao(database: NexusDatabase): PresetDao {
+        return database.presetDao()
+    }
+
+    @Provides
+    fun provideSettingsDao(database: NexusDatabase): SettingsDao {
+        return database.settingsDao()
     }
 }
