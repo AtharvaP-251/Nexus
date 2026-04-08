@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import androidx.core.content.ContextCompat
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -26,7 +28,9 @@ data class PlaybackState(
     val isPlaying: Boolean = false,
     val currentTrack: TrackEntity? = null,
     val progress: Long = 0L,
-    val duration: Long = 0L
+    val duration: Long = 0L,
+    val shuffleModeEnabled: Boolean = false,
+    val repeatMode: Int = Player.REPEAT_MODE_OFF
 )
 
 @Singleton
@@ -35,6 +39,7 @@ class AudioController @Inject constructor(
 ) {
     private var mediaController: MediaController? = null
     private val scope = CoroutineScope(Dispatchers.Main)
+    private var progressJob: Job? = null
 
     private val _playbackState = MutableStateFlow(PlaybackState())
     val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
@@ -42,6 +47,11 @@ class AudioController @Inject constructor(
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _playbackState.update { it.copy(isPlaying = isPlaying) }
+            if (isPlaying) {
+                startProgressPolling()
+            } else {
+                stopProgressPolling()
+            }
         }
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -57,13 +67,27 @@ class AudioController @Inject constructor(
                     format = "",
                     dateAdded = 0L
                 )
-                _playbackState.update { it.copy(currentTrack = track, duration = mediaController?.duration?.takeIf { d -> d > 0 } ?: 0L) }
+                _playbackState.update { 
+                    it.copy(
+                        currentTrack = track, 
+                        duration = mediaController?.duration?.takeIf { d -> d > 0 } ?: 0L,
+                        progress = mediaController?.currentPosition ?: 0L
+                    ) 
+                }
             }
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
             super.onPlaybackStateChanged(playbackState)
             _playbackState.update { it.copy(duration = mediaController?.duration?.takeIf { d -> d > 0 } ?: 0L) }
+        }
+
+        override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+            _playbackState.update { it.copy(shuffleModeEnabled = shuffleModeEnabled) }
+        }
+
+        override fun onRepeatModeChanged(repeatMode: Int) {
+            _playbackState.update { it.copy(repeatMode = repeatMode) }
         }
     }
 
@@ -78,6 +102,18 @@ class AudioController @Inject constructor(
             {
                 mediaController = future.get()
                 mediaController?.addListener(playerListener)
+                
+                // Sync initial state
+                _playbackState.update { 
+                    it.copy(
+                        shuffleModeEnabled = mediaController?.shuffleModeEnabled ?: false,
+                        repeatMode = mediaController?.repeatMode ?: Player.REPEAT_MODE_OFF
+                    )
+                }
+
+                if (mediaController?.isPlaying == true) {
+                    startProgressPolling()
+                }
             },
             ContextCompat.getMainExecutor(context)
         )
@@ -105,6 +141,22 @@ class AudioController @Inject constructor(
         }
     }
 
+    private fun startProgressPolling() {
+        progressJob?.cancel()
+        progressJob = scope.launch {
+            while (true) {
+                val position = mediaController?.currentPosition ?: 0L
+                _playbackState.update { it.copy(progress = position) }
+                delay(500)
+            }
+        }
+    }
+
+    private fun stopProgressPolling() {
+        progressJob?.cancel()
+        progressJob = null
+    }
+
     fun playPause() {
         mediaController?.let {
             if (it.isPlaying) it.pause() else it.play()
@@ -121,5 +173,23 @@ class AudioController @Inject constructor(
 
     fun skipToPrevious() {
         mediaController?.seekToPreviousMediaItem()
+    }
+
+    fun toggleShuffle() {
+        mediaController?.let {
+            it.shuffleModeEnabled = !it.shuffleModeEnabled
+        }
+    }
+
+    fun toggleRepeatMode() {
+        mediaController?.let {
+            val nextMode = when (it.repeatMode) {
+                Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+                Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+                Player.REPEAT_MODE_ONE -> Player.REPEAT_MODE_OFF
+                else -> Player.REPEAT_MODE_OFF
+            }
+            it.repeatMode = nextMode
+        }
     }
 }

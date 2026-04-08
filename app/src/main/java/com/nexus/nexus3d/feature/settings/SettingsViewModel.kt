@@ -23,6 +23,7 @@ class SettingsViewModel @Inject constructor(
     )
     val currentMacros = dspRepository.currentMacros
     val isDspEnabled = dspRepository.isDspEnabled
+    val themeMode = dspRepository.themeMode
 
     fun selectPreset(preset: PresetEntity) {
         dspRepository.selectPreset(preset.id)
@@ -34,6 +35,10 @@ class SettingsViewModel @Inject constructor(
 
     fun updateMacro(type: String, value: Float) {
         dspRepository.updateMacro(type, value)
+    }
+
+    fun setThemeMode(mode: Int) {
+        dspRepository.setThemeMode(mode)
     }
 
     fun resetToDefaults() {

@@ -11,15 +11,20 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.nexus.nexus3d.feature.library.LibraryScreen
 import com.nexus.nexus3d.feature.library.LibraryViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nexus.nexus3d.feature.player.PlayerScreen
 import com.nexus.nexus3d.feature.settings.SettingsScreen
+import com.nexus.nexus3d.feature.settings.SettingsViewModel
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.List
+import com.nexus.nexus3d.ui.theme.Nexus3DTheme
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -27,7 +32,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
+            val settingsViewModel: SettingsViewModel = hiltViewModel()
+            val themeMode by settingsViewModel.themeMode.collectAsState()
+
+            Nexus3DTheme(themeMode = themeMode) {
                 NexusApp()
             }
         }
@@ -47,7 +55,7 @@ fun NexusApp() {
                     selected = currentRoute == "library",
                     onClick = {
                         navController.navigate("library") {
-                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }
@@ -60,7 +68,7 @@ fun NexusApp() {
                     selected = currentRoute == "player",
                     onClick = {
                         navController.navigate("player") {
-                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }
@@ -73,7 +81,7 @@ fun NexusApp() {
                     selected = currentRoute == "settings",
                     onClick = {
                         navController.navigate("settings") {
-                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }
@@ -95,7 +103,11 @@ fun NexusApp() {
                     viewModel = viewModel,
                     onTrackClick = { startTrack, tracks ->
                         viewModel.playTrack(startTrack, tracks)
-                        navController.navigate("player")
+                        navController.navigate("player") {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 )
             }

@@ -4,6 +4,7 @@ import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,8 +15,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nexus.nexus3d.core.data.TrackEntity
+import android.content.pm.PackageManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,8 +47,16 @@ fun LibraryScreen(
         }
     )
 
+    val context = LocalContext.current
+    
     LaunchedEffect(Unit) {
-        permissionLauncher.launch(permissionToRequest)
+        val status = ContextCompat.checkSelfPermission(context, permissionToRequest)
+        if (status == PackageManager.PERMISSION_GRANTED) {
+            hasPermission = true
+            viewModel.scanLibrary()
+        } else {
+            permissionLauncher.launch(permissionToRequest)
+        }
     }
 
     Scaffold(
