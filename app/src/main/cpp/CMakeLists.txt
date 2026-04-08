@@ -2,11 +2,13 @@ cmake_minimum_required(VERSION 3.22.1)
 
 project("dsp_native")
 
-# Add the dsp_stub library
+# Add the DSP framework library
 add_library(
         dsp_native
         SHARED
-        dsp_stub.cpp
+        dsp_native.cpp
+        ProcessorChain.cpp
+        modules/Modules.cpp
 )
 
 # Find the standard Android log library
