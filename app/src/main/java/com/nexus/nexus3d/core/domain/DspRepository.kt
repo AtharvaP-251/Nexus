@@ -21,12 +21,17 @@ class DspRepository @Inject constructor(
     private val settingsDao: SettingsDao
 ) {
     private val repositoryScope = CoroutineScope(Dispatchers.IO)
+    
+    val allPresets = presetDao.getAllPresets()
 
     private val _activePreset = MutableStateFlow<PresetEntity?>(null)
     val activePreset: StateFlow<PresetEntity?> = _activePreset.asStateFlow()
 
     private val _currentMacros = MutableStateFlow(MacroMapper.MacroValues())
     val currentMacros: StateFlow<MacroMapper.MacroValues> = _currentMacros.asStateFlow()
+
+    private val _isDspEnabled = MutableStateFlow(true)
+    val isDspEnabled: StateFlow<Boolean> = _isDspEnabled.asStateFlow()
 
     init {
         repositoryScope.launch {
@@ -45,6 +50,7 @@ class DspRepository @Inject constructor(
                     clarity = activeSettings.macroClarity,
                     distance = activeSettings.macroDistance
                 )
+                _isDspEnabled.value = activeSettings.isDspEnabled
                 
                 applyBasePreset(preset)
                 MacroMapper.applyMacros(_currentMacros.value)
@@ -53,20 +59,27 @@ class DspRepository @Inject constructor(
     }
 
     private suspend fun initializePresets() {
+        val factoryPresets = listOf(
+            PresetEntity(name = "OFF", isFactoryPreset = true, globalBypass = true),
+            PresetEntity(name = "Studio Reference", isFactoryPreset = true),
+            PresetEntity(name = "Wide 3D", isFactoryPreset = true, widthAmount = 1.5f, crossfeedMix = 0.2f),
+            PresetEntity(name = "Concert Hall", isFactoryPreset = true, reverbWet = 0.3f, reverbDecay = 0.8f, erMix = 0.4f),
+            PresetEntity(name = "Vocal Focus", isFactoryPreset = true, msMidGain = 1.2f, eqPeakGain = 3.0f, eqPeakFreq = 2500.0f),
+            PresetEntity(name = "Immersive Mode", isFactoryPreset = true, hrtfIntensity = 0.8f, haasMix = 0.5f, widthAmount = 2.0f)
+        )
+
         if (presetDao.getPresetCount() == 0) {
             // Add Factory Presets
-            val factoryPresets = listOf(
-                PresetEntity(name = "Studio Reference", isFactoryPreset = true),
-                PresetEntity(name = "Wide 3D", isFactoryPreset = true, widthAmount = 1.5f, crossfeedMix = 0.2f),
-                PresetEntity(name = "Concert Hall", isFactoryPreset = true, reverbWet = 0.3f, reverbDecay = 0.8f, erMix = 0.4f),
-                PresetEntity(name = "Vocal Focus", isFactoryPreset = true, msMidGain = 1.2f, eqPeakGain = 3.0f, eqPeakFreq = 2500.0f),
-                PresetEntity(name = "Immersive Mode", isFactoryPreset = true, hrtfIntensity = 0.8f, haasMix = 0.5f, widthAmount = 2.0f)
-            )
             factoryPresets.forEach { presetDao.insertPreset(it) }
             
             // Initial settings if none exist
             if (settingsDao.getSettingsSync() == null) {
                 settingsDao.updateSettings(SettingsEntity(activePresetId = 1))
+            }
+        } else {
+            // Ensure OFF preset exists for existing users
+            if (presetDao.getPresetByName("OFF") == null) {
+                presetDao.insertPreset(PresetEntity(name = "OFF", isFactoryPreset = true, globalBypass = true))
             }
         }
     }
@@ -111,10 +124,23 @@ class DspRepository @Inject constructor(
         }
     }
 
+    fun toggleDsp(enabled: Boolean) {
+        _isDspEnabled.value = enabled
+        // Immediately apply to bridge
+        val shouldBypass = !enabled || (_activePreset.value?.globalBypass ?: false)
+        DspNativeBridge.setDspParameter(DspNativeBridge.GLOBAL_BYPASS, if (shouldBypass) 1.0f else 0.0f)
+        
+        repositoryScope.launch {
+            val currentSettings = settingsDao.getSettingsSync() ?: SettingsEntity()
+            settingsDao.updateSettings(currentSettings.copy(isDspEnabled = enabled))
+        }
+    }
+
     private fun applyBasePreset(preset: PresetEntity?) {
         val p = preset ?: PresetEntity(name = "Default")
         
-        DspNativeBridge.setDspParameter(DspNativeBridge.GLOBAL_BYPASS, if (p.globalBypass) 1.0f else 0.0f)
+        val shouldBypass = !_isDspEnabled.value || p.globalBypass
+        DspNativeBridge.setDspParameter(DspNativeBridge.GLOBAL_BYPASS, if (shouldBypass) 1.0f else 0.0f)
         DspNativeBridge.setDspParameter(DspNativeBridge.GLOBAL_GAIN, p.globalGain)
         
         DspNativeBridge.setDspParameter(DspNativeBridge.EQ_PRE_GAIN, p.eqPreGain)

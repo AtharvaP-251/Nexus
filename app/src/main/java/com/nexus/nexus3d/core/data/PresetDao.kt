@@ -19,6 +19,9 @@ interface PresetDao {
 
     @Query("SELECT COUNT(*) FROM presets")
     suspend fun getPresetCount(): Int
+
+    @Query("SELECT * FROM presets WHERE name = :name")
+    suspend fun getPresetByName(name: String): PresetEntity?
 }
 
 @Dao

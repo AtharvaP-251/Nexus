@@ -15,6 +15,11 @@ import com.nexus.nexus3d.feature.library.LibraryScreen
 import com.nexus.nexus3d.feature.library.LibraryViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nexus.nexus3d.feature.player.PlayerScreen
+import com.nexus.nexus3d.feature.settings.SettingsScreen
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.List
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -47,7 +52,7 @@ fun NexusApp() {
                             restoreState = true
                         }
                     },
-                    icon = { Text("Lib") },
+                    icon = { Icon(Icons.Default.List, contentDescription = null) },
                     label = { Text("Library") }
                 )
                 
@@ -60,8 +65,21 @@ fun NexusApp() {
                             restoreState = true
                         }
                     },
-                    icon = { Text("Play") },
+                    icon = { Icon(Icons.Default.PlayArrow, contentDescription = null) },
                     label = { Text("Player") }
+                )
+
+                NavigationBarItem(
+                    selected = currentRoute == "settings",
+                    onClick = {
+                        navController.navigate("settings") {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                    label = { Text("Settings") }
                 )
             }
         }
@@ -85,6 +103,9 @@ fun NexusApp() {
                 PlayerScreen(
                     onNavigateBack = { navController.popBackStack() }
                 )
+            }
+            composable("settings") {
+                SettingsScreen()
             }
         }
     }
