@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt.android)
 }
 
 android {
@@ -68,6 +70,16 @@ dependencies {
 
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)
+
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.android.compiler)
+    implementation(libs.androidx.hilt.navigation.compose)
+
+    implementation(libs.androidx.navigation.compose)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
