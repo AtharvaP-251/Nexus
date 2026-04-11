@@ -54,20 +54,137 @@ class DspRepository @Inject constructor(
                 _isDspEnabled.value = activeSettings.isDspEnabled
                 
                 applyBasePreset(preset)
-                MacroMapper.applyMacros(_currentMacros.value)
+                MacroMapper.applyMacros(_currentMacros.value, preset)
             }
         }
     }
 
     private suspend fun initializePresets() {
         val factoryPresets = listOf(
-            PresetEntity(name = "OFF", isFactoryPreset = true, globalBypass = true),
-            PresetEntity(name = "Studio Reference", isFactoryPreset = true),
-            PresetEntity(name = "Wide 3D", isFactoryPreset = true, widthAmount = 1.5f, crossfeedMix = 0.2f),
-            PresetEntity(name = "Concert Hall", isFactoryPreset = true, reverbWet = 0.3f, reverbDecay = 0.8f, erMix = 0.4f),
-            PresetEntity(name = "Vocal Focus", isFactoryPreset = true, msMidGain = 1.2f, eqPeakGain = 3.0f, eqPeakFreq = 2500.0f),
-            PresetEntity(name = "Immersive Mode", isFactoryPreset = true, hrtfIntensity = 0.8f, haasMix = 0.5f, widthAmount = 2.0f)
+
+            // ── Custom ────────────────────────────────────────────────────────
+            // Flagship defaults — the best spatial experience out of the box.
+            // Macro sliders modulate around these values.
+            PresetEntity(
+                name = "Custom", isFactoryPreset = true,
+                // Recalibrated to flagship engine defaults — tonal transparency first
+                hrtfIntensity     = 0.65f, hrtfElevation    = 0.20f,
+                itdAmount         = 0.35f,                       // ITD now active
+                crossfeedMix      = 0.30f, crossfeedCutoff  = 700.0f,
+                msSideGain        = 1.00f,                       // neutral; adaptive M/S handles expansion
+                widthAmount       = 1.15f,
+                haasDelayMs       = 8.0f,  haasMix          = 0.22f, // inside Haas zone, no echo
+                erMix             = 0.28f, erDelaySpreadMs  = 22.0f, erHfDamping = 0.45f,
+                reverbWet         = 0.12f, reverbDecay      = 0.65f,
+                reverbDamping     = 0.50f, reverbRoomSize   = 0.52f,
+                reverbPredelayMs  = 8.0f
+            ),
+
+            // ── Studio Reference ─────────────────────────────────────────────
+            // Minimal processing — clean, analytical, near-field monitor feel.
+            PresetEntity(
+                name = "Studio Reference", isFactoryPreset = true,
+                crossfeedMix = 0.10f,
+                widthAmount  = 1.05f,
+                globalGain   = 0.95f
+            ),
+
+            // ── Wide 3D ──────────────────────────────────────────────────────
+            // Maximum stereo expansion + light spatial depth.
+            PresetEntity(
+                name = "Wide 3D", isFactoryPreset = true,
+                widthAmount   = 1.45f, msSideGain    = 1.28f,
+                crossfeedMix  = 0.15f,
+                haasMix       = 0.22f, haasDelayMs   = 12.0f, // fixed: was 16ms (above safe zone)
+                hrtfIntensity = 0.45f, itdAmount      = 0.25f,
+                erMix         = 0.22f,
+                globalGain    = 0.90f
+            ),
+
+            // ── Concert Hall ─────────────────────────────────────────────────
+            // Natural room ambience — reverb-forward, wide diffuse field.
+            PresetEntity(
+                name = "Concert Hall", isFactoryPreset = true,
+                reverbWet        = 0.28f, reverbDecay    = 0.80f,
+                reverbRoomSize   = 0.75f, reverbDamping  = 0.35f,
+                reverbPredelayMs = 20.0f,
+                erMix            = 0.35f, erDelaySpreadMs = 40.0f,
+                crossfeedMix     = 0.15f,
+                widthAmount      = 1.20f,
+                globalGain       = 0.90f
+            ),
+
+            // ── Vocal Focus ──────────────────────────────────────────────────
+            // Center emphasis + subtle spatial — vocals forward, slight room.
+            PresetEntity(
+                name = "Vocal Focus", isFactoryPreset = true,
+                msMidGain    = 1.10f,
+                eqPeakGain   = 2.0f, eqPeakFreq = 2500.0f,
+                crossfeedMix = 0.10f,
+                widthAmount  = 1.05f,
+                globalGain   = 0.90f
+            ),
+
+            // ── Immersive Mode ───────────────────────────────────────────────
+            // Maximum externalization — everything pushed for the widest stage.
+            PresetEntity(
+                name = "Immersive Mode", isFactoryPreset = true,
+                hrtfIntensity    = 0.85f, hrtfElevation   = 0.40f,
+                itdAmount        = 0.50f,                        // maximum externalization (HRTF+ITD pairing)
+                crossfeedMix     = 0.20f, crossfeedCutoff = 700.0f,
+                msSideGain       = 1.30f,
+                widthAmount      = 1.52f,
+                haasMix          = 0.28f, haasDelayMs     = 13.0f, // fixed: was 20ms (echo zone!)
+                erMix            = 0.40f, erDelaySpreadMs = 28.0f, erHfDamping = 0.40f,
+                reverbWet        = 0.20f, reverbDecay     = 0.78f,
+                reverbDamping    = 0.40f, reverbRoomSize  = 0.62f,
+                reverbPredelayMs = 12.0f,
+                globalGain       = 0.86f
+            ),
+
+            // ── Phone Speaker Enhancer ───────────────────────────────────────
+            PresetEntity(
+                name = "Phone Speaker Enhancer",
+                isFactoryPreset = true,
+                msMidGain       = 0.9f,
+                msSideGain      = 1.30f,
+                widthAmount     = 1.40f,
+                eqLowShelfFreq  = 180.0f,
+                eqLowShelfGain  = 3.0f,
+                eqPeakFreq      = 3500.0f,
+                eqPeakGain      = -2.0f,
+                haasMix         = 0.20f, haasDelayMs = 14.0f,
+                erMix           = 0.15f,
+                globalGain      = 0.92f
+            ),
+
+            // ── Over-Ear Optimizer ───────────────────────────────────────────
+            PresetEntity(
+                name = "Over-Ear Optimizer",
+                isFactoryPreset = true,
+                crossfeedMix    = 0.15f,
+                widthAmount     = 1.20f,
+                haasMix         = 0.15f, haasDelayMs = 10.0f,
+                hrtfIntensity   = 0.35f, itdAmount   = 0.30f,
+                eqLowShelfFreq  = 120.0f,
+                eqLowShelfGain  = 1.5f,
+                globalGain      = 0.95f
+            ),
+
+            // ── In-Ear Monitor (IEM) ─────────────────────────────────────────
+            PresetEntity(
+                name = "In-Ear Monitor (IEM)",
+                isFactoryPreset = true,
+                crossfeedMix     = 0.35f, crossfeedCutoff = 700.0f,
+                widthAmount      = 1.15f,
+                hrtfIntensity    = 0.30f, itdAmount        = 0.20f,
+                erMix            = 0.20f, erDelaySpreadMs  = 15.0f,
+                eqHighShelfFreq  = 7000.0f,
+                eqHighShelfGain  = -1.5f,
+                globalGain       = 0.95f
+            )
         )
+
 
         if (presetDao.getPresetCount() == 0) {
             // Add Factory Presets
@@ -78,9 +195,39 @@ class DspRepository @Inject constructor(
                 settingsDao.updateSettings(SettingsEntity(activePresetId = 1))
             }
         } else {
-            // Ensure OFF preset exists for existing users
-            if (presetDao.getPresetByName("OFF") == null) {
-                presetDao.insertPreset(PresetEntity(name = "OFF", isFactoryPreset = true, globalBypass = true))
+            // Ensure Custom preset exists for existing users
+            if (presetDao.getPresetByName("Custom") == null) {
+                presetDao.insertPreset(PresetEntity(name = "Custom", isFactoryPreset = true))
+            }
+            // Ensure new Phone Speaker preset exists for existing users
+            if (presetDao.getPresetByName("Phone Speaker Enhancer") == null) {
+                val p = factoryPresets.find { it.name == "Phone Speaker Enhancer" }
+                if (p != null) presetDao.insertPreset(p)
+            }
+            // Ensure Over-Ear preset exists
+            if (presetDao.getPresetByName("Over-Ear Optimizer") == null) {
+                val p = factoryPresets.find { it.name == "Over-Ear Optimizer" }
+                if (p != null) presetDao.insertPreset(p)
+            }
+            // Ensure IEM preset exists
+            if (presetDao.getPresetByName("In-Ear Monitor (IEM)") == null) {
+                val p = factoryPresets.find { it.name == "In-Ear Monitor (IEM)" }
+                if (p != null) presetDao.insertPreset(p)
+            }
+            // Actively clean up the old 'OFF' preset from earlier versions
+            val oldOffPreset = presetDao.getPresetByName("OFF")
+            if (oldOffPreset != null) {
+                presetDao.deletePreset(oldOffPreset)
+                // If they were actively using the OFF preset, fallback to Custom
+                val currentSettings = settingsDao.getSettingsSync()
+                if (currentSettings?.activePresetId == oldOffPreset.id) {
+                    val custom = presetDao.getPresetByName("Custom")
+                    if (custom != null) {
+                        settingsDao.updateSettings(currentSettings.copy(activePresetId = custom.id))
+                        _activePreset.value = custom
+                        applyBasePreset(custom)
+                    }
+                }
             }
         }
     }
@@ -96,7 +243,7 @@ class DspRepository @Inject constructor(
         }
         
         _currentMacros.value = newMacros
-        MacroMapper.applyMacros(newMacros)
+        MacroMapper.applyMacros(newMacros, _activePreset.value)
         
         // Save to DB (debounced or just on change)
         repositoryScope.launch {
@@ -111,13 +258,30 @@ class DspRepository @Inject constructor(
         }
     }
 
+    fun resetMacros() {
+        val zeroedMacros = MacroMapper.MacroValues(0.0f, 0.0f, 0.0f, 0.0f, 0.0f)
+        _currentMacros.value = zeroedMacros
+        MacroMapper.applyMacros(zeroedMacros, _activePreset.value)
+
+        repositoryScope.launch {
+            val currentSettings = settingsDao.getSettingsSync() ?: SettingsEntity()
+            settingsDao.updateSettings(currentSettings.copy(
+                macroWidth = 0.0f,
+                macroDepth = 0.0f,
+                macroRoomSize = 0.0f,
+                macroClarity = 0.0f,
+                macroDistance = 0.0f
+            ))
+        }
+    }
+
     fun selectPreset(presetId: Long) {
         repositoryScope.launch {
             val preset = presetDao.getPresetById(presetId)
             if (preset != null) {
                 _activePreset.value = preset
                 applyBasePreset(preset)
-                MacroMapper.applyMacros(_currentMacros.value)
+                MacroMapper.applyMacros(_currentMacros.value, preset)
                 
                 val currentSettings = settingsDao.getSettingsSync() ?: SettingsEntity()
                 settingsDao.updateSettings(currentSettings.copy(activePresetId = presetId))
@@ -172,15 +336,19 @@ class DspRepository @Inject constructor(
         DspNativeBridge.setDspParameter(DspNativeBridge.DISTANCE_AMOUNT, p.distanceAmount)
         DspNativeBridge.setDspParameter(DspNativeBridge.DISTANCE_ROLLOFF, p.distanceRolloff)
         
-        DspNativeBridge.setDspParameter(DspNativeBridge.HRTF_INTENSITY, p.hrtfIntensity)
-        
+        DspNativeBridge.setDspParameter(DspNativeBridge.HRTF_INTENSITY,  p.hrtfIntensity)
+        DspNativeBridge.setDspParameter(DspNativeBridge.HRTF_ELEVATION,  p.hrtfElevation)
+        DspNativeBridge.setDspParameter(DspNativeBridge.ITD_AMOUNT,      p.itdAmount)
+
         DspNativeBridge.setDspParameter(DspNativeBridge.ER_DELAY_SPREAD_MS, p.erDelaySpreadMs)
-        DspNativeBridge.setDspParameter(DspNativeBridge.ER_MIX, p.erMix)
-        
-        DspNativeBridge.setDspParameter(DspNativeBridge.REVERB_DECAY, p.reverbDecay)
-        DspNativeBridge.setDspParameter(DspNativeBridge.REVERB_DAMPING, p.reverbDamping)
-        DspNativeBridge.setDspParameter(DspNativeBridge.REVERB_ROOM_SIZE, p.reverbRoomSize)
-        DspNativeBridge.setDspParameter(DspNativeBridge.REVERB_WET, p.reverbWet)
-        DspNativeBridge.setDspParameter(DspNativeBridge.REVERB_DRY, p.reverbDry)
+        DspNativeBridge.setDspParameter(DspNativeBridge.ER_MIX,          p.erMix)
+        DspNativeBridge.setDspParameter(DspNativeBridge.ER_HF_DAMPING,   p.erHfDamping)
+
+        DspNativeBridge.setDspParameter(DspNativeBridge.REVERB_DECAY,       p.reverbDecay)
+        DspNativeBridge.setDspParameter(DspNativeBridge.REVERB_DAMPING,     p.reverbDamping)
+        DspNativeBridge.setDspParameter(DspNativeBridge.REVERB_ROOM_SIZE,   p.reverbRoomSize)
+        DspNativeBridge.setDspParameter(DspNativeBridge.REVERB_WET,         p.reverbWet)
+        DspNativeBridge.setDspParameter(DspNativeBridge.REVERB_DRY,         p.reverbDry)
+        DspNativeBridge.setDspParameter(DspNativeBridge.REVERB_PREDELAY_MS, p.reverbPredelayMs)
     }
 }

@@ -38,11 +38,7 @@ class SettingsViewModel @Inject constructor(
 
 
     fun resetToDefaults() {
-        // Reset macros to 0.5f (neutral)
-        dspRepository.updateMacro("width", 0.5f)
-        dspRepository.updateMacro("depth", 0.5f)
-        dspRepository.updateMacro("room_size", 0.5f)
-        dspRepository.updateMacro("clarity", 0.5f)
-        dspRepository.updateMacro("distance", 0.5f)
+        // Reset all macros to 0.0f atomically to prevent race conditions
+        dspRepository.resetMacros()
     }
 }

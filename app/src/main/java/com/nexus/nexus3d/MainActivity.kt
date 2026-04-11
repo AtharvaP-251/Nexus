@@ -92,7 +92,7 @@ fun NexusApp() {
     ) { paddingValues ->
         NavHost(
             navController = navController,
-            startDestination = "library",
+            startDestination = "player",
             modifier = Modifier.padding(paddingValues)
         ) {
             composable("library") {

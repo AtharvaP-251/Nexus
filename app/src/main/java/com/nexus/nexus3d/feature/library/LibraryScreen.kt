@@ -2,6 +2,7 @@ package com.nexus.nexus3d.feature.library
 
 import android.Manifest
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
@@ -37,6 +38,11 @@ fun LibraryScreen(
 ) {
     val groupedTracks by viewModel.groupedTracks.collectAsState()
     var selectedFolderName by remember { mutableStateOf<String?>(null) }
+
+    // Intercept system back button to go from folder view back to library root
+    BackHandler(enabled = selectedFolderName != null) {
+        selectedFolderName = null
+    }
     
     val permissionToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         Manifest.permission.READ_MEDIA_AUDIO

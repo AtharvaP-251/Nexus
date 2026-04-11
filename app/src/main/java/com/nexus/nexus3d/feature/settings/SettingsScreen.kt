@@ -34,6 +34,7 @@ fun SettingsScreen(
     val allPresets by viewModel.allPresets.collectAsState()
     val macros by viewModel.currentMacros.collectAsState()
     val isDspEnabled by viewModel.isDspEnabled.collectAsState()
+    val areMacrosEnabled = isDspEnabled && activePreset?.name == "Custom"
 
     Column(
         modifier = Modifier
@@ -121,35 +122,35 @@ fun SettingsScreen(
             value = macros.width,
             onValueChange = { viewModel.updateMacro("width", it) },
             description = "Expansion & Crossfeed",
-            enabled = isDspEnabled
+            enabled = areMacrosEnabled
         )
         MacroSlider(
             label = "Depth",
             value = macros.depth,
             onValueChange = { viewModel.updateMacro("depth", it) },
             description = "Haas & Distance Modeling",
-            enabled = isDspEnabled
+            enabled = areMacrosEnabled
         )
         MacroSlider(
             label = "Room Size",
             value = macros.roomSize,
             onValueChange = { viewModel.updateMacro("room_size", it) },
             description = "Reverb Decay & ER Spread",
-            enabled = isDspEnabled
+            enabled = areMacrosEnabled
         )
         MacroSlider(
             label = "Clarity",
             value = macros.clarity,
             onValueChange = { viewModel.updateMacro("clarity", it) },
             description = "M/S Focus & EQ Tilt",
-            enabled = isDspEnabled
+            enabled = areMacrosEnabled
         )
         MacroSlider(
             label = "Distance",
             value = macros.distance,
             onValueChange = { viewModel.updateMacro("distance", it) },
             description = "HRTF & Air Absorption",
-            enabled = isDspEnabled
+            enabled = areMacrosEnabled
         )
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -159,7 +160,7 @@ fun SettingsScreen(
             onClick = { viewModel.resetToDefaults() },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            enabled = isDspEnabled
+            enabled = areMacrosEnabled
         ) {
             Icon(Icons.Default.Refresh, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
